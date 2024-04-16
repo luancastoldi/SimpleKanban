@@ -1,11 +1,16 @@
 
 let draggedCard = null;
-let id;
+let g_id;
+let g_card_index = 0;
+let g_index_drag_card;
+let g_column_drag_start;
+let g_column_drag_end;
+let json_file = 'bd.json'
 
 openJSON()
 
 function openJSON() {
-  fetch('../bd.json')
+  fetch('bd.json')
     .then(response => {
       return response.json();
     })
@@ -14,15 +19,31 @@ function openJSON() {
 
 function makeColumns(objJSON) {
 
-  id = objJSON.id;
-
+  g_id = objJSON.id;
   let columns = objJSON.columns;
-  let todo = columns.todo
-  let done = columns.done
-  let doing = columns.doing;
+  mapAllColumn(columns.todo, 'todo')
+  mapAllColumn(columns.doing, 'doing')
+  mapAllColumn(columns.done, 'done')
+  setIndexCards()
+}
 
-  todo.forEach(card => {
-    document.getElementById('todo').insertAdjacentHTML("beforeend",
+
+
+function setIndexCards() {
+  let indexColumn = 0
+  document.querySelectorAll('.column').forEach(columns => {
+    columns.info = indexColumn ++;
+    let index = 0;
+    columns.querySelectorAll('.card').forEach(cards => {
+      cards.info = index++;
+    })
+  })
+}
+
+function mapAllColumn(column, id_element) {
+
+  column.forEach(card => {
+    document.getElementById(id_element).insertAdjacentHTML("beforeend",
       `<div class="card" id='card-${card.id}' draggable="true">
         <div>
             <span>${card.title}</span>
@@ -39,29 +60,33 @@ function makeColumns(objJSON) {
       </div>`)
 
     card.tags.forEach(tag => document.querySelector('#card-' + card.id + '>.tags').insertAdjacentHTML("beforeend", `<span>${tag}</span>`))
+
   })
 
   document.querySelectorAll('.card').forEach(card => {
     card.addEventListener('dragstart', dragStart);
     card.addEventListener('dragend', dragEnd);
   });
-  
+
   document.querySelectorAll('.column').forEach(column => {
     column.addEventListener('dragover', dragOver);
     column.addEventListener('dragenter', dragEnter);
     column.addEventListener('dragleave', dragLeave);
     column.addEventListener('drop', dragDrop);
-  });  
+  });
 }
 
-function formatData(dataJSON){
+function formatData(dataJSON) {
   let newData = String(dataJSON).split("-")
-  return newData[2] + '/' + newData[1] + '/' + newData[0] 
+  return newData[2] + '/' + newData[1] + '/' + newData[0]
 }
 
 function dragStart() {
   draggedCard = this;
   this.classList.add('dragging');
+
+  g_column_drag_start = this.parentElement.id
+  g_index_drag_card = this.info;
 }
 
 function dragEnd() {
@@ -72,13 +97,10 @@ function dragEnd() {
 function dragOver(e) {
   e.preventDefault();
   this.classList.add('drop-here');
-
-  console.log('aqui');
 }
 
 function dragEnter() {
   this.classList.add('drop-here');
-  // console.log(this);  //sobre a coluna
 }
 
 function dragLeave() {
@@ -88,6 +110,21 @@ function dragLeave() {
 function dragDrop() {
   this.classList.remove('drop-here');
   this.appendChild(draggedCard);
+  g_column_drag_end = this.id;
+  setIndexCards();
+  shakeCard()
 }
 
 
+function shakeCard() {
+
+  let url = 'api/crud.php?sc=' + g_column_drag_start + '&ec=' + g_column_drag_end + '&ci=' + g_index_drag_card
+  fetch(url)
+    .then(data => {
+      console.log(data.url);
+    })
+
+  // console.log('Coluna Start: ' + g_column_drag_start);
+  // console.log('Coluna End: ' + g_column_drag_end);
+  // console.log('Card Index ' + g_index_drag_card);
+}
